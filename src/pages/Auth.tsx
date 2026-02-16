@@ -22,7 +22,7 @@ export default function Auth() {
     return null;
   }
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -32,7 +32,6 @@ export default function Auth() {
         toast({ title: "Login failed", description: error.message, variant: "destructive" });
       } else {
         toast({ title: "Welcome back!" });
-        // The navigate logic inside the useEffect/render will handle redirection
       }
     } else {
       if (!fullName.trim()) {
@@ -40,17 +39,11 @@ export default function Auth() {
         setLoading(false);
         return;
       }
-      
       const { error } = await signUp(email, password, fullName);
-      
       if (error) {
         toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
       } else {
-        // UPDATED: No more "Check your email" message
-        toast({ 
-          title: "Account created!", 
-          description: "Welcome to the car rental service." 
-        });
+        toast({ title: "Check your email", description: "We sent you a confirmation link." });
       }
     }
     setLoading(false);
