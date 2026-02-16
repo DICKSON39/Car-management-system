@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Loader2, Image as ImageIcon } from "lucide-react"; // Added icons
 import { Textarea } from "@/components/ui/textarea";
 
 interface CarForm { name: string; image_url: string; trip_type: string; capacity: number; price_per_day: number; description: string; available: boolean; }
@@ -22,7 +22,41 @@ export default function AdminCars() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState<CarForm>(empty);
+  const [uploading, setUploading] = useState(false); // New state for upload
 
+  // --- NEW: UPLOAD LOGIC ---
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // 1. Generate unique path
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${Math.random()}.${fileExt}`;
+
+      // 2. Upload to 'car-images' bucket
+      const { error: uploadError } = await supabase.storage
+        .from('car-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 3. Get URL and update form
+      const { data: { publicUrl } } = supabase.storage
+        .from('car-images')
+        .getPublicUrl(filePath);
+
+      setForm({ ...form, image_url: publicUrl });
+      toast({ title: "Image uploaded!" });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ... (keep useQuery and other mutations the same) ...
   const { data: cars, isLoading } = useQuery({
     queryKey: ["admin-cars"],
     queryFn: async () => { const { data, error } = await supabase.from("cars").select("*").order("created_at", { ascending: false }); if (error) throw error; return data; },
@@ -67,7 +101,28 @@ export default function AdminCars() {
             <DialogHeader><DialogTitle>{editing ? "Edit Car" : "Add Car"}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Image URL</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." /></div>
+              
+              {/* --- UPDATED IMAGE SECTION --- */}
+              <div className="space-y-2">
+                <Label>Car Image</Label>
+                <div className="flex items-center gap-4">
+                  {form.image_url && (
+                    <img src={form.image_url} alt="Preview" className="h-16 w-16 object-cover rounded border" />
+                  )}
+                  <div className="flex-1">
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleFileUpload} 
+                      disabled={uploading}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  {uploading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Uploading automatically generates the URL.</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Trip Type</Label>
                   <Select value={form.trip_type} onValueChange={(v) => setForm({ ...form, trip_type: v })}>
@@ -79,16 +134,18 @@ export default function AdminCars() {
               </div>
               <div className="space-y-2"><Label>Price / Day ($)</Label><Input type="number" value={form.price_per_day} onChange={(e) => setForm({ ...form, price_per_day: parseFloat(e.target.value) || 0 })} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <Button className="w-full" onClick={() => saveCar.mutate()} disabled={!form.name.trim()}>{editing ? "Update" : "Add"} Car</Button>
+              <Button className="w-full" onClick={() => saveCar.mutate()} disabled={!form.name.trim() || uploading}>{editing ? "Update" : "Add"} Car</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* ... (rest of the table code) ... */}
       <div className="rounded-lg border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Image</TableHead> {/* New column */}
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Capacity</TableHead>
@@ -100,6 +157,11 @@ export default function AdminCars() {
           <TableBody>
             {cars?.map((car) => (
               <TableRow key={car.id}>
+                <TableCell>
+                  <div className="h-10 w-10 rounded overflow-hidden bg-muted">
+                    {car.image_url ? <img src={car.image_url} className="h-full w-full object-cover" /> : <ImageIcon className="h-full w-full p-2 text-muted-foreground" />}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{car.name}</TableCell>
                 <TableCell><Badge variant="secondary" className="capitalize">{car.trip_type.replace("_", " ")}</Badge></TableCell>
                 <TableCell>{car.capacity}</TableCell>

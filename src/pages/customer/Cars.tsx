@@ -60,13 +60,20 @@ export default function Cars() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered?.map((car) => (
             <Card key={car.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/cars/${car.id}`)}>
-              <div className="h-48 bg-muted flex items-center justify-center overflow-hidden">
-                {car.image_url ? (
-                  <img src={car.image_url} alt={car.name} className="w-full h-full object-cover" />
-                ) : (
-                  <Fuel className="h-16 w-16 text-muted-foreground" />
-                )}
-              </div>
+             <div className="h-48 bg-muted flex items-center justify-center overflow-hidden">
+  {car.image_url ? (
+    <img 
+      src={car.image_url} 
+      alt={car.name} 
+      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110" 
+    />
+  ) : (
+    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+      <Fuel className="h-12 w-12" />
+      <span className="text-xs">No Image Available</span>
+    </div>
+  )}
+</div>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{car.name}</CardTitle>
