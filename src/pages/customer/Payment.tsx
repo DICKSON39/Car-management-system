@@ -37,7 +37,7 @@ export default function Payment() {
   }, [booking]);
 
   const handleWhatsAppRedirect = (bId: string, totalPrice: number, carName: string) => {
-    // ⚠️ Replace with your actual business phone number (International format, no +)
+    // ⚠️ Business phone number (International format, no +)
     const adminPhone = "254712821098"; 
     const shortId = bId.split('-')[0].toUpperCase();
     const message = `Hello! I've requested a booking.%0A%0A*Car:* ${carName}%0A*Booking ID:* ${shortId}%0A*Total:* $${totalPrice}%0A*Contact:* ${phone}%0A%0APlease provide payment instructions.`;
@@ -75,20 +75,36 @@ export default function Payment() {
 
       if (bookingError) throw bookingError;
 
+      // 3. UPDATE CAR AVAILABILITY
+      // This is what makes the car disappear/show as booked in your main list
+      if (booking?.car_id) {
+        const { error: carError } = await supabase
+          .from("cars")
+          .update({ available: false })
+          .eq("id", booking.car_id);
+          
+        if (carError) {
+          console.error("Failed to update car status:", carError);
+        }
+      }
+
       toast({ 
         title: "Booking Submitted!", 
         description: "Opening WhatsApp to finalize your booking..." 
       });
 
-      // 3. Trigger WhatsApp Redirect
+      // 4. Trigger WhatsApp Redirect
       handleWhatsAppRedirect(
         bookingId!, 
         Number(booking.total_price), 
         (booking as any).cars?.name || "Car"
       );
 
-      // 4. Cleanup and move user to their list
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      // 5. Cleanup and Refresh Data
+      // We invalidate "cars" so the browse page knows a car is now unavailable
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      await queryClient.invalidateQueries({ queryKey: ["cars"] });
+      
       navigate("/bookings");
 
     } catch (error: any) {
@@ -117,7 +133,6 @@ export default function Payment() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Contact Input */}
           <div className="space-y-3">
             <label className="text-sm font-bold flex items-center gap-2">
               <Phone className="h-4 w-4 text-primary" /> Contact Phone Number
@@ -131,7 +146,6 @@ export default function Payment() {
             />
           </div>
 
-          {/* Booking Summary Card */}
           <div className="rounded-2xl bg-slate-50 p-6 space-y-4 border border-slate-100">
              <div className="flex justify-between items-center text-sm">
               <span className="text-slate-500 font-medium">Vehicle</span>
@@ -160,7 +174,6 @@ export default function Payment() {
             </div>
           </div>
           
-          {/* Submit Button */}
           <Button 
             onClick={handleSubmitForReview} 
             disabled={processing} 
