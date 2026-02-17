@@ -132,25 +132,34 @@ export default function Payment() {
           </div>
 
           {/* Booking Summary Card */}
-          <div className="rounded-xl bg-slate-100 p-5 space-y-3 border border-slate-200">
-             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Vehicle</span>
-              <span className="font-bold">{(booking as any).cars?.name}</span>
+          <div className="rounded-2xl bg-slate-50 p-6 space-y-4 border border-slate-100">
+             <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Vehicle</span>
+              <span className="font-bold text-slate-900">{(booking as any).cars?.name}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Pickup</span>
-              <span className="font-medium">{booking.pickup_date}</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Date</span>
+              <span className="font-semibold text-slate-700">{booking.pickup_date}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Location</span>
-              <span className="font-medium">{booking.pickup_location}</span>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Location</span>
+              <span className="font-semibold text-slate-700">{booking.pickup_location}</span>
             </div>
-            <div className="pt-3 mt-3 border-t border-slate-300 flex justify-between items-baseline">
-              <span className="font-bold text-slate-700">Total Price</span>
-              <span className="text-2xl font-black text-primary">${Number(booking.total_price).toFixed(0)}</span>
+            
+            <div className="pt-4 mt-2 border-t border-slate-200 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total Amount</p>
+                <p className="text-3xl font-black text-slate-900">
+                  <span className="text-lg font-bold text-primary mr-1">$</span>
+                  {Number(booking.total_price).toFixed(0)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
             </div>
           </div>
-
+          
           {/* Submit Button */}
           <Button 
             onClick={handleSubmitForReview} 
