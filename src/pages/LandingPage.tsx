@@ -98,17 +98,45 @@ const { data: stats } = useQuery({
   // --- MAINTENANCE MODE OVERLAY ---
   if (settings?.maintenance_mode) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center p-6 text-center space-y-6 bg-background">
-        <div className="bg-amber-100 p-6 rounded-full text-amber-600 animate-pulse">
-          <AlertTriangle className="h-16 w-16" />
+      <div className="h-screen w-full flex flex-col items-center justify-center p-6 text-center bg-[#FDFDFD] relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-slate-200/50 blur-[100px] rounded-full" />
+
+        <div className="relative space-y-8 max-w-lg">
+          <div className="inline-flex items-center justify-center p-4 bg-white shadow-xl shadow-slate-200/50 rounded-[2rem] mb-4">
+            <Clock className="h-10 w-10 text-primary animate-pulse" />
+          </div>
+          
+          <div className="space-y-4">
+            <h1 className="text-5xl font-medium tracking-tighter text-slate-900">
+              Refining the <span className="font-serif italic">Experience.</span>
+            </h1>
+            <p className="text-slate-500 font-light leading-relaxed">
+              We are currently polishing the dashboard and expanding our 2026 fleet. 
+              {settings?.site_name || "DRIVEFLOW"} will be back online momentarily.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+            <Button 
+              variant="outline" 
+              className="rounded-full px-8 h-12 border-slate-200 hover:bg-slate-50"
+              onClick={() => window.location.reload()}
+            >
+              Check Status
+            </Button>
+            <Button 
+              className="rounded-full px-8 h-12 bg-slate-900 text-white shadow-lg"
+              onClick={() => window.location.href = `mailto:${settings?.support_email}`}
+            >
+              Contact Concierge
+            </Button>
+          </div>
         </div>
-        <h1 className="text-4xl font-black italic uppercase">Under Maintenance</h1>
-        <p className="text-muted-foreground max-w-md italic">
-          We are currently updating {settings?.site_name || "our platform"} to serve you better. 
-          We'll be back online shortly!
-        </p>
-        <div className="flex gap-4 pt-4">
-          <Button variant="outline" onClick={() => window.location.reload()}>Refresh Page</Button>
+
+        <div className="absolute bottom-12 text-[10px] uppercase tracking-[0.3em] text-slate-300 font-bold">
+          {settings?.site_name} / 2026 Edition
         </div>
       </div>
     );
