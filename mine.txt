@@ -1,0 +1,229 @@
+-- Global Admin Settings
+CREATE TABLE admin_settings (
+  id TEXT PRIMARY KEY DEFAULT 'global_config',
+  site_name TEXT DEFAULT 'DriveFlow',
+  support_email TEXT DEFAULT 'support@driveflow.com',
+  support_phone TEXT DEFAULT '+254 700 000 000',
+  currency_symbol TEXT DEFAULT '$',
+  maintenance_mode BOOLEAN DEFAULT false,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Initialize settings row
+INSERT INTO admin_settings (id) VALUES ('global_config') ON CONFLICT DO NOTHING;
+
+-- Contact Inquiries (Landing Page Leads)
+CREATE TABLE contact_inquiries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  subject TEXT,
+  message TEXT NOT NULL,
+  status TEXT DEFAULT 'unread', -- 'unread' or 'read'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Allow public to see cars and reviews
+CREATE POLICY "Allow public select on cars" ON cars FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow public select on reviews" ON bookings FOR SELECT TO anon, authenticated USING (rating IS NOT NULL);
+CREATE POLICY "Allow public select on profiles" ON profiles FOR SELECT TO anon, authenticated USING (true);
+
+-- Settings security
+ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public view settings" ON admin_settings FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin manage settings" ON admin_settings FOR ALL TO authenticated 
+  USING (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- Contact Form security
+ALTER TABLE contact_inquiries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can submit inquiries" ON contact_inquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Admins can view inquiries" ON contact_inquiries FOR SELECT TO authenticated 
+  USING (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+
+SQLCREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, email)
+  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.email);
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- This tells Supabase to call an Edge Function whenever a new inquiry is inserted
+CREATE TRIGGER on_new_inquiry
+AFTER INSERT ON contact_inquiries
+FOR EACH ROW
+EXECUTE FUNCTION supabase_functions.http_request(
+  'https://<yqwrvtatcqqkbaprrmmy>.supabase.co/functions/v1/send-inquiry-email',
+  'POST',
+  '{"Content-Type":"application/json"}',
+  '{}'
+);
+
+CREATE OR REPLACE FUNCTION trigger_send_invoice()
+RETURNS trigger AS $$
+BEGIN
+  -- Only fire if the status was changed to 'paid'
+  IF (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'paid') THEN
+    PERFORM supabase_functions.http_request(
+      'https://<yqwrvtatcqqkbaprrmmy>.supabase.co/functions/v1/generate-invoice',
+      'POST',
+      '{"Content-Type":"application/json"}',
+      json_build_object('record', row_to_json(NEW))::text
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_booking_paid
+AFTER UPDATE ON bookings
+FOR EACH ROW
+EXECUTE FUNCTION trigger_send_invoice();
+
+
+-- Enable the extension that allows SQL to make HTTP requests
+CREATE EXTENSION IF NOT EXISTS "pgnet" WITH SCHEMA "extensions";
+
+
+npm install supabase --save-dev
+
+
+Install the Supabase CLI (If you haven't yet)
+If you don't have the Supabase tool installed on your machine, run this first:
+
+On Windows (using Scoop): scoop install supabase
+
+On Mac/Linux: brew install supabase/tap/supabase
+
+Using NPM (Universal): npm install supabase --save-dev
+
+2. Login to Supabase
+In your terminal, type:
+
+Bash
+npx supabase login
+This will open your browser and ask you to authorize your account.
+
+3. Link your Project
+You need to tell the CLI which project this code belongs to. You can find your Project ID in your Supabase dashboard URL: https://supabase.com/dashboard/project/your-project-id
+
+Bash
+npx supabase link --project-ref your-project-id
+4. Deploy & Set Secrets (The Actual Step)
+Now that you are linked, run these two commands in order:
+
+Step A: Deploy the code
+This uploads your index.ts file to the cloud.
+
+Bash
+npx supabase functions deploy generate-invoice
+Step B: Set the API Key
+This securely stores your Resend key so the function can use it. Do not put the key in the code; use this command:
+
+Bash
+npx supabase secrets set RESEND_API_KEY=re_123456789yourkeyhere
+
+
+npx supabase functions deploy generate-invoice --no-verify-jwt
+
+
+
+''''''import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+
+// Updated CORS headers to include Methods
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const { booking_id, customer_email, customer_name, car_name, amount, pickup, return: returnDate } = await req.json()
+    
+    // Log for debugging in Supabase dashboard
+    console.log(`Processing invoice for booking: ${booking_id}`);
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: 'Elite Car Rentals <onboarding@resend.dev>',
+        to: ["dicksonndumia19@gmail.com"],
+        subject: `Invoice for your booking: ${car_name}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
+            <h2 style="color: #000; font-style: italic;">ELITE CAR RENTALS</h2>
+            <hr />
+            <p>Hi <strong>${customer_name}</strong>,</p>
+            <p>Thank you for your payment. Your booking is officially confirmed!</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Booking Details</h3>
+              <p><strong>Vehicle:</strong> ${car_name}</p>
+              <p><strong>Pick-up:</strong> ${pickup}</p>
+              <p><strong>Return:</strong> ${returnDate}</p>
+              <p style="font-size: 18px; color: #10b981;"><strong>Total Paid: $${amount}</strong></p>
+            </div>
+
+            <p style="font-size: 12px; color: #666;">
+              Invoice ID: ${booking_id}<br />
+              Status: PAID (WhatsApp Verified)
+            </p>
+            <hr />
+            <p style="text-align: center; font-size: 11px; color: #999;">
+              Thank you for choosing Elite Car Rentals. Drive safe!
+            </p>
+          </div>
+        `,
+      }),
+    })
+
+    const data = await res.json()
+    
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    console.error("Error in function:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
+})
+
+''''''
+
+-- 1. Enable RLS (if not already enabled)
+ALTER TABLE contact_inquiries ENABLE ROW LEVEL SECURITY;
+
+-- 2. Create policy to allow Authenticated Users (Admins) to update status
+CREATE POLICY "Allow admins to update inquiry status" 
+ON contact_inquiries 
+FOR UPDATE 
+TO authenticated 
+USING (true) 
+WITH CHECK (true);
+
+-- 3. Create policy to allow admins to view all inquiries
+CREATE POLICY "Allow admins to view all inquiries" 
+ON contact_inquiries 
+FOR SELECT 
+TO authenticated 
+USING (true);

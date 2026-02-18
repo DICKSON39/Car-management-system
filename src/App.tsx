@@ -18,6 +18,10 @@ import AdminBookings from "./pages/admin/AdminBookings";
 import AdminCars from "./pages/admin/AdminCars";
 import AdminDrivers from "./pages/admin/AdminDrivers";
 import Revenue from "./pages/admin/Revenue";
+import Profile from "./pages/Profile";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminInquiries from "./pages/admin/AdminInquiries";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +40,7 @@ const App = () => (
               <Route path="/cars/:id" element={<CarDetails />} />
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/payment/:bookingId" element={<Payment />} />
+              <Route path="/profile" element={<Profile/>}/>
             </Route>
             <Route element={<ProtectedRoute requiredRole="admin"><AppLayout /></ProtectedRoute>}>
               <Route path="/admin" element={<Dashboard />} />
@@ -43,6 +48,10 @@ const App = () => (
               <Route path="/admin/cars" element={<AdminCars />} />
               <Route path="/admin/drivers" element={<AdminDrivers />} />
               <Route path="/admin/revenue" element={<Revenue />} />
+              <Route path="/profile" element={<Profile/>}/>
+              <Route path="/reviews/admin" element={<AdminReviews/>}/>
+              <Route path="/messages" element={<AdminInquiries/>}/>
+              <Route path='/settings' element={<AdminSettings/>}/>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

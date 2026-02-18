@@ -1,4 +1,4 @@
-import { Car, CalendarDays, History, LayoutDashboard, Users, Truck, BarChart3, LogOut } from "lucide-react";
+import { Car, CalendarDays, History, LayoutDashboard, Users, Truck, BarChart3, LogOut, icons, Icon, Settings, User2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -6,10 +6,14 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { url } from "inspector";
+import { profile } from "console";
+import { title } from "process";
 
 const customerLinks = [
   { title: "Browse Cars", url: "/cars", icon: Car },
   { title: "My Bookings", url: "/bookings", icon: History },
+  {title: "profile", url: '/profile', icon: Users },
 ];
 
 const adminLinks = [
@@ -18,6 +22,10 @@ const adminLinks = [
   { title: "Cars", url: "/admin/cars", icon: Car },
   { title: "Drivers", url: "/admin/drivers", icon: Users },
   { title: "Revenue", url: "/admin/revenue", icon: BarChart3 },
+  {title: "profile", url: '/profile', icon: User2 },
+  {title: "reviews", url: '/reviews/admin', icon:BarChart3},
+  {title: "messages", url: '/messages', icon:BarChart3},
+  {title: "settings", url: '/settings', icon:Settings}
 ];
 
 export function AppSidebar() {
