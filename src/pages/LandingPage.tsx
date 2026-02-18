@@ -64,7 +64,7 @@ const { data: stats } = useQuery({
 
     return {
       cars: carCount || 0,
-      users: (userCount || 0) + 150, // Adding a "base" number for a established feel
+      users: (userCount || 0) , // Adding a "base" number for a established feel
       cities: 5, // You can make this dynamic if you have a locations table
     };
   },
@@ -281,7 +281,7 @@ const { data: stats } = useQuery({
       {/* --- TESTIMONIALS --- */}
       <section className="bg-primary/5 py-24 px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-center text-4xl font-black italic mb-16 uppercase">Driver Feedback</h2>
+          <h2 className="text-center text-4xl font-black italic mb-16 uppercase">Customers Feedback</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials?.map((t, i) => (
               <Card key={i} className="bg-background border-none shadow-sm relative pt-4">
